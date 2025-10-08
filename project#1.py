@@ -50,6 +50,8 @@ def preview_data(rows, n=5):
     print("Sample rows:")
     for r in rows[:n]:
         print(r)
+
+        
 def main():
     filename = "penguins.csv"
     rows = load_csv(filename)
