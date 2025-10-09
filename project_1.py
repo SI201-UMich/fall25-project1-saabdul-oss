@@ -40,6 +40,40 @@ def clean_row(row):
     row["year"] = to_int(row.get("year"))
 
     return row
+
+# Calculation 1 (Average) Mean flipper length by (species, island) for a chosen year
+def calc_avg_flipper_by_species_island(rows, year):
+    groups = {}
+    for r in rows:
+        if r.get("year") != year:
+            continue
+        species = r.get("species")
+        island = r.get("island")
+        flipper_len = r.get("flipper_length_mm")
+
+        if not species or not island:
+            continue
+        if flipper_len is None:
+            continue
+
+        key = (species, island)
+        if key not in groups:
+            groups[key] = {"sum": 0.0, "count": 0}
+        groups[key]["sum"] += flipper_len
+        groups[key]["count"] += 1
+    # Build output rows with averages
+    table = []
+    for (species, island), group_stats in groups.items():
+        if group_stats["count"] == 0:
+            continue
+        mean_flipper = group_stats["sum"] / group_stats["count"]
+        table.append({"species": species, "island": island, "year": year, "mean_flipper_mm": mean_flipper, "N": group_stats["count"]})
+
+
+
+
+
+
 # Print column names, total row count and the first n rows 
 def preview_data(rows, n=5):
     if not rows:
@@ -134,3 +168,4 @@ class TestCalcPctBigBySex(unittest.TestCase):
         self.assertIn("female", m)
         self.assertNotIn("male", m)
         self.assertEqual(m["female"]["N"], 2)
+        
