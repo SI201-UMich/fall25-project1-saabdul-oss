@@ -69,6 +69,34 @@ def calc_avg_flipper_by_species_island(rows, year):
         mean_flipper = group_stats["sum"] / group_stats["count"]
         table.append({"species": species, "island": island, "year": year, "mean_flipper_mm": mean_flipper, "N": group_stats["count"]})
 
+# Calculation 2 (Percentage) % of large penguins by sex
+def calc_pct_large_by_sex(rows):
+    counts = {}
+    for r in rows:
+        sex = r.get("sex")
+        mass = r.get("body_mass_g")
+        bill_len = r.get("bill_length_mm")
+
+        if not sex or mass is None or bill_len is None:
+            continue
+        if sex not in counts:
+            counts[sex] = {"total": 0, "large": 0}
+        counts[sex]["total"] += 1
+        if mass >= 40000.0 and bill_len >= 45.0:
+            counts[sex]["large"] += 1
+    # Build output rows with percentages
+    table = []
+    for sex, c in counts.items():
+        total = c["total"]
+        large = c["large"]
+        if total == 0:
+            continue
+        pct_large = 100 * large / total
+        table.append({"sex": sex, "pct_large": pct_large, "N": total})
+    table.sort(key=lambda d: d["sex"])
+    return table
+
+
 
 
 
@@ -168,4 +196,4 @@ class TestCalcPctBigBySex(unittest.TestCase):
         self.assertIn("female", m)
         self.assertNotIn("male", m)
         self.assertEqual(m["female"]["N"], 2)
-        
+
