@@ -38,7 +38,6 @@ def clean_row(row):
     row["flipper_length_mm"] = to_float(row.get("flipper_length_mm"))
     row["body_mass_g"] = to_float(row.get("body_mass_g"))
     row["year"] = to_int(row.get("year"))
-
     return row
 
 # Calculation 1 (Average) Mean flipper length by (species, island) for a chosen year
@@ -96,11 +95,15 @@ def calc_pct_large_by_sex(rows):
     table.sort(key=lambda d: d["sex"])
     return table
 
-
-
-
-
-
+# Write the results
+def write_results_csv(path, headers, rows):
+    source_dir = os.path.dirname(__file__)
+    full_path = os.path.join(source_dir, path)
+    with open(full_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        writer.writeheader()
+        for r in rows:
+            writer.writerow({h: r.get(h) for h in headers})
 
 # Print column names, total row count and the first n rows 
 def preview_data(rows, n=5):
@@ -114,18 +117,21 @@ def preview_data(rows, n=5):
         print(r)
 
 def main():
-    filename = "penguins.csv"
-    rows = load_csv(filename)
+    rows = load_csv("penguins.csv")
     preview_data(rows, n=5)
 
-if __name__ == "__main__":
-    main()
+    # Calculation 1 for sample year 2007
+    avg_rows = calc_avg_flipper_by_species_island(rows, year=2007)
+    write_results_csv("avg_flipper_by_species_island_2007.csv", headers=["species", "island", "year", "mean_flipper_mm", "N"], rows=avg_rows)
+    # Calculation 2 
+    pct_rows = calc_pct_large_by_sex(rows)
+    write_results_csv("pct_large_by_sex.csv", headers=["sex", "pct_large", "N"], rows=pct_rows)
 
-import unittest
-from project_1 import (calc_avg_flipper_by_species_island, calc_pct_big_by_sex)
-
+# Tests, helper to build CSV row dicts for tests
 def row(species=None, island=None, flipper=None, year=None, sex=None, mass=None, bill_len=None):
     return {"species": species, "island": island, "flipper_length_mm": flipper, "year": year, "sex": sex, "body_mass_g": mass, "bill_length_mm": bill_len}
+
+import unittest
 
 class TestCalcAvgFlipperBySpeciesIsland(unittest.TestCase):
     def test_basic_two_species_two_islands_single_year(self):
@@ -162,38 +168,41 @@ class TestCalcAvgFlipperBySpeciesIsland(unittest.TestCase):
         out = calc_avg_flipper_by_species_island(rows, 1999)
         self.assertEqual(out, []) 
 
-class TestCalcPctBigBySex(unittest.TestCase):
-    def test_pct_big_both_sexes_mixed(self):
+class TestCalcPctLargeBySex(unittest.TestCase):
+    def test_pct_large_both_sexes_mixed(self):
         rows = [row(sex="female", mass=4100.0, bill_len=46.0), row(sex="female", mass=3950.0, bill_len=46.0), row(sex="female", mass=4100.0, bill_len=44.0), row(sex="male", mass=4050.0, bill_len=47.0), row(sex="male", mass=4200.0, bill_len=45.0), row(sex="male", mass=3000.0, bill_len=46.0)]
-        out = calc_pct_big_by_sex(rows)
+        out = calc_pct_large_by_sex(rows)
         m = {d["sex"]: d for d in out}
         self.assertIn("female", m)
         self.assertIn("male", m)
         self.assertEqual(m["female"]["N"], 3)
         self.assertEqual(m["male"]["N"], 3)
-        self.assertAlmostEqual(m["female"]["pct_big"], 100.0*(1/3), places=2)
-        self.assertAlmostEqual(m["male"]["pct_big"],   100.0*(2/3), places=2)
+        self.assertAlmostEqual(m["female"]["pct_large"], 100.0*(1/3), places=2)
+        self.assertAlmostEqual(m["male"]["pct_large"],   100.0*(2/3), places=2)
 
     def test_threshold_inclusive(self):
         rows = [row(sex="male", mass=4000.0, bill_len=45.0), row(sex="male", mass=3999.9, bill_len=45.0), row(sex="female", mass=4100.0, bill_len=44.9), row(sex="female", mass=4100.0, bill_len=45.0)]
-        out = calc_pct_big_by_sex(rows)
+        out = calc_pct_large_by_sex(rows)
         m = {d["sex"]: d for d in out}
-        self.assertAlmostEqual(m["male"]["pct_big"], 50.0, places=6)
-        self.assertAlmostEqual(m["female"]["pct_big"], 50.0, places=6)
+        self.assertAlmostEqual(m["male"]["pct_large"], 50.0, places=6)
+        self.assertAlmostEqual(m["female"]["pct_large"], 50.0, places=6)
     # Edge Cases
     def test_missing_sex_rows_are_excluded(self):
         rows = [row(sex=None, mass=5000.0, bill_len=50.0), row(sex="", mass=5000.0, bill_len=50.0), row(sex="male", mass=4000.0, bill_len=45.0)]
-        out = calc_pct_big_by_sex(rows)
+        out = calc_pct_large_by_sex(rows)
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0]["sex"], "male")
         self.assertEqual(out[0]["N"], 1)
-        self.assertAlmostEqual(out[0]["pct_big"], 100.0, places=6)
+        self.assertAlmostEqual(out[0]["pct_large"], 100.0, places=6)
 
     def test_sex_with_no_usable_rows_is_skipped(self):
         rows = [row(sex="female", mass=4100.0, bill_len=46.0), row(sex="female", mass=3000.0, bill_len=46.0)]
-        out = calc_pct_big_by_sex(rows)
+        out = calc_pct_large_by_sex(rows)
         m = {d["sex"]: d for d in out}
         self.assertIn("female", m)
         self.assertNotIn("male", m)
         self.assertEqual(m["female"]["N"], 2)
 
+if __name__ == "__main__":
+    main()
+    
